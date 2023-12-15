@@ -7,6 +7,9 @@ import os
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+## file we want to use
+FILE = "successful-dual-second-prompt.xlsx"
+
 ## amount of money we don't want to go over on any single run
 LIMIT = 10.00
 
@@ -31,10 +34,10 @@ def estimate_cost(text, price):
 
 
 ## read in the conversations
-df = pd.read_excel("follow-up-missing-one.xlsx")
+df = pd.read_excel(FILE)
 
 ## create a new df to save results in
-results = pd.DataFrame(columns = ['Domain', 'Output', 'Variable-Assignment'])
+results = pd.DataFrame(columns = ['Domain-1', 'Domain-2', 'Output', 'Variable-Assignment'])
 
 client = OpenAI()
 
@@ -49,15 +52,17 @@ for i in range(len(df)):
 
         print("Starting test point " + str(i) + "...")
         ## extract the conversation
-        domain = df.loc[i, 'Domain']
+        domain_1 = df.loc[i, 'Domain-1']
+        domain_2 = df.loc[i, 'Domain-2']
         output = df.loc[i, 'Output']
 
         ## put values into temporary df that gets appended to the results each time
-        temp = pd.DataFrame(columns = ['Domain', 'Output', 'Variable-Assignment'])
-        temp.loc[0] = [df.loc[i, 'Domain'], df.loc[i, 'Output'], ""]
+        temp = pd.DataFrame(columns = ['Domain-1', 'Domain-2', 'Output', 'Variable-Assignment'])
+        temp.loc[0] = [df.loc[i, 'Domain-1'], df.loc[i, 'Domain-2'], df.loc[i, 'Output'], ""]
 
         ## fill the three different prompts with the conversation
-        prompt = fill_secondary_prompt(domain, output)
+        prompt = fill_secondary_prompt_dual(domain_1, domain_2, output)
+        print(prompt)
 
         ## calculate and add on the input costs
         money_spent += estimate_cost(prompt, FOUR_INPUT) #+ estimate_cost(one, THREE_FIVE_INPUT) + estimate_cost(few, THREE_FIVE_INPUT))
@@ -96,7 +101,7 @@ for i in range(len(df)):
         results = results.reset_index()
 
         ## save what's been collected of the results to an excel file
-        results.to_excel('gpt-missing-follow-up-stopped-early.xlsx', index=False)
+        results.to_excel('dual-follow-up-stopped-early.xlsx', index=False)
 
         print('exceeded desired spend limit, process terminated and data saved as is')
         exit(-1)
@@ -106,5 +111,5 @@ for i in range(len(df)):
 results = results.reset_index()
 
 ## save the resuls to an excel file
-results.to_excel('gpt-missing-follow-up-results.xlsx', index=False)
+results.to_excel('dual-follow-up-results.xlsx', index=False)
 print('successfully generated results for all data points with estimated total spend: ' + str(money_spent))

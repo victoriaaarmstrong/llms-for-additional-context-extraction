@@ -7,6 +7,9 @@ import os
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+## file we want to use
+FILE = "single-filled.xlsx"
+
 ## amount of money we don't want to go over on any single run
 LIMIT = 10.00
 
@@ -31,10 +34,10 @@ def estimate_cost(text, price):
 
 
 ## read in the conversations
-df = pd.read_excel("missing-dual-prompt.xlsx")
+df = pd.read_excel(FILE)
 
 ## create a new df to save results in
-results = pd.DataFrame(columns = ['Domain-1', 'Domain-2', 'Output', 'Variable-Assignment'])
+results = pd.DataFrame(columns = ['Conversation', 'Main', 'Context', 'Zero-Output', 'One-Output', 'Few-Output'])
 
 client = OpenAI()
 
@@ -49,28 +52,25 @@ for i in range(len(df)):
 
         print("Starting test point " + str(i) + "...")
         ## extract the conversation
-        domain_1 = df.loc[i, 'Domain-1']
-        domain_2 = df.loc[i, 'Domain-2']
-        output = df.loc[i, 'Output']
+        conversation = df.loc[i, 'Full-Text']
 
         ## put values into temporary df that gets appended to the results each time
-        temp = pd.DataFrame(columns = ['Domain-1', 'Domain-2', 'Output', 'Variable-Assignment'])
-        temp.loc[0] = [df.loc[i, 'Domain-1'], df.loc[i, 'Domain-2'], df.loc[i, 'Output'], ""]
+        temp = pd.DataFrame(columns = ['Conversation', 'Main', 'Context', 'Zero-Output', 'One-Output', 'Few-Output'])
+        temp.loc[0] = [conversation, df.loc[i, 'Main'], df.loc[i, 'Context'], "", "", ""]
 
         ## fill the three different prompts with the conversation
-        prompt = fill_secondary_prompt_dual(domain_1, domain_2, output)
-        print(prompt)
+        zero, one, few = fill_primary_prompt(conversation)
 
         ## calculate and add on the input costs
-        money_spent += estimate_cost(prompt, FOUR_INPUT) #+ estimate_cost(one, THREE_FIVE_INPUT) + estimate_cost(few, THREE_FIVE_INPUT))
+        money_spent += (estimate_cost(zero, FOUR_INPUT) + estimate_cost(one, FOUR_INPUT) + estimate_cost(few, FOUR_INPUT))
 
         ## generate the output from the LLM
-        result = client.chat.completions.create(
+        zero_output = client.chat.completions.create(
           model="gpt-4",
           messages=[
             {
               "role": "user",
-              "content": prompt,
+              "content": zero,
             }
           ],
           temperature=1,
@@ -80,16 +80,46 @@ for i in range(len(df)):
           presence_penalty=0
         )
 
+        one_output = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "user",
+                    "content": one,
+                }
+            ],
+            temperature=1,
+            max_tokens=256,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+
+        few_output = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "user",
+                    "content": few,
+                }
+            ],
+            temperature=1,
+            max_tokens=256,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
 
         ## calculate and add on output costs
-        money_spent += estimate_cost(result.choices[0].message.content, FOUR_OUTPUT) #+ estimate_cost(one_output.choices[0].message.content, THREE_FIVE_OUTPUT) + estimate_cost(few_output.choices[0].message.content, THREE_FIVE_OUTPUT))
+        money_spent += (estimate_cost(zero_output.choices[0].message.content, FOUR_OUTPUT) + estimate_cost(one_output.choices[0].message.content, FOUR_OUTPUT) + estimate_cost(few_output.choices[0].message.content, FOUR_OUTPUT))
 
         ## save to temporary df
-        temp['Variable-Assignment'] = result.choices[0].message.content
+        temp['Zero-Output'] = zero_output.choices[0].message.content
+        temp['One-Output'] = one_output.choices[0].message.content
+        temp['Few-Output'] = few_output.choices[0].message.content
 
         ## append temp df as a row to the results
         results = pd.concat([results, temp], ignore_index=True)
-
         #results = results.append(temp)
         print("Finishing test point " + str(i) + "...\n\n")
 
@@ -98,7 +128,7 @@ for i in range(len(df)):
         results = results.reset_index()
 
         ## save what's been collected of the results to an excel file
-        results.to_excel('gpt-missing-dual-follow-up-stopped-early.xlsx', index=False)
+        results.to_excel('results-stopped-early.xlsx', index=False)
 
         print('exceeded desired spend limit, process terminated and data saved as is')
         exit(-1)
@@ -108,5 +138,5 @@ for i in range(len(df)):
 results = results.reset_index()
 
 ## save the resuls to an excel file
-results.to_excel('gpt-missing-dual-follow-up-results.xlsx', index=False)
+results.to_excel('results.xlsx', index=False)
 print('successfully generated results for all data points with estimated total spend: ' + str(money_spent))
