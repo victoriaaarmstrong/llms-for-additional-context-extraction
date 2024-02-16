@@ -1,5 +1,34 @@
 import pandas as pd
 
+########################
+## Plots from Table 3 ##
+########################
+
+## Sentences pie chart
+sentences = pd.DataFrame({'sentences': [16, 2]},
+                  index=['One Sentence', 'Two Sentences'])
+sentences_image = sentences.plot.pie(y='sentences', colors=['deepskyblue','tomato'], legend=True, labeldistance=None, autopct='%1.1f%%')
+sentences_image.set_ylabel("")
+sentences_image.figure.savefig('sentences.jpg', bbox_inches='tight')
+
+## Reversed pie chart
+reversed = pd.DataFrame({'reversed': [11, 7]},
+                  index=['Yes', 'No'])
+reversed_image = reversed.plot.pie(y='reversed', colors=['deepskyblue','tomato'], legend=True, labeldistance=None, autopct='%1.1f%%')
+reversed_image.set_ylabel("")
+reversed_image.figure.savefig('reversed.jpg', bbox_inches='tight')
+
+## Single reversed pie chart
+single_reversed = pd.DataFrame({'single-reversed': [6, 10]},
+                  index=['Correctly Classified', 'Incorrectly Classified'])
+single_reversed_image = single_reversed.plot.pie(y='single-reversed', colors=['deepskyblue','tomato'], legend=True, labeldistance=None, autopct='%1.1f%%')
+single_reversed_image.set_ylabel("")
+single_reversed_image.figure.savefig('single_reversed.jpg', bbox_inches='tight')
+
+#######################
+## Plots for Results ##
+#######################
+
 ## read in the CSV with aggregate results
 df = pd.read_csv('results.csv')
 
@@ -50,4 +79,4 @@ hotel_train_image = hotel_train.plot.bar(x='X-Shot', stacked=True, title="Hotel-
 hotel_train_image.legend(loc='lower right')
 hotel_train_image.set_xlabel("")
 hotel_train_image.figure.savefig('hotel_train_results.jpg', bbox_inches='tight')
-
+"""
