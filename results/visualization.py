@@ -79,4 +79,4 @@ hotel_train_image = hotel_train.plot.bar(x='X-Shot', stacked=True, title="Hotel-
 hotel_train_image.legend(loc='lower right')
 hotel_train_image.set_xlabel("")
 hotel_train_image.figure.savefig('hotel_train_results.jpg', bbox_inches='tight')
-"""
+
